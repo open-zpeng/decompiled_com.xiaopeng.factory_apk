@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package protocol;
+option java_package = "com.xpeng.upso.proxy";
+option java_outer_classname = "PSOProtocol";
+
+message IdentityInfo {
+    uint32 role = 1;         //定义身份角色，0是客服端，1是服务端
+    uint32 version = 2;      //协议版本号
+    string device_type = 3;  //CDU ,XPU,TBOX
+    string device_id = 4;
+    uint32 mask = 5;         //用于做特殊区分的掩码字段
+    uint32 has_secret = 6;   //用于标志是否有预置密钥，0未预置，1已经预置密钥
+    string car_type = 7;  //车型代号，如E38,E38V,E28A,E28AV
+    uint32 user = 8; //是否是用户版本 1为是， 0为否
+    string rom_info = 9; //rom信息,如4G_E38C_8620030EA20003_V0.4.C_H.D_20220530091539_USER_Release
+    string platform = 10;//芯片平台参数，指示name key 等平台相关的关联关系
+}
+
+message SecretAuth {
+    uint32 index = 1;              //对应密钥索引，若index = 0xffffffff则一次行使用所有预置密钥按顺序对内容加解密，并将加解密结果存放在result中,
+    uint32 cont = 2;               //返回result的数量
+    repeated string result = 3;    //加密请求：内容明文；解密请求：内容密文；加密响应：内容密文；解密响应：内容明文
+}
+
+message SecretPresetResponse {
+    uint32 index = 1;           //获取对应索引的密钥，若index = 0xffffffff 则获取所有密钥
+}
+
+message SecretDelete {
+    uint32 index = 1;           //删除对应索引的密钥，若index = 0xffffffff 则删除所有密钥
+}
+
+message Secret {
+
+    enum SecretType {
+        KEY_TYPE_AES = 0;
+        KEY_TYPE_CERTIFICATE = 1;
+        KEY_TYPE_TBD = 2;
+    }
+
+    SecretType type = 1;
+    string name = 2;
+    int64 index = 3;
+    int64 create_time = 4;
+    string secret = 5;
+    string sign = 6;
+
+}
+
+message SecretPreset {
+    uint32 index = 1;                   //对应获取密钥索引，若index = 0xffffffff 则获取所有密钥
+    uint32 cont = 2;                    //传输密钥的个数
+    repeated Secret secret = 3;         //返回对应索引的密钥或所有密钥
+}
+
+message SecretDeleteResponse {
+    uint32 index = 1;                   //删除对应索引的密钥，若index = 0xffffffff 则删除所有密钥，响应数据包复用此消息
+    uint32 status = 2;                  //若为0表示删除失败，若为1表示删除成功
+}
+
+
+message RequestResponse{
+
+    enum MessageType {
+        XP_INFO = 0;
+        XP_SECRET_PRESET = 1;
+        XP_SECRET_ENCRYPT_AUTH = 2;
+        XP_SECRET_DECRYPT_AUTH = 3;
+        XP_SECRET_DELETE = 4;
+
+        XP_INFO_RESPONSE = 5;
+        XP_SECRET_PRESET_RESPONSE = 6;
+        XP_SECRET_ENCRYPT_AUTH_RESPONSE = 7;
+        XP_SECRET_DECRYPT_AUTH_RESPONSE = 8;
+        XP_SECRET_DELETE_RESPONSE = 9;
+
+        XP_SECRET_RESULT = 10;
+    }
+
+    MessageType message_type = 1;               //请求类型
+    string sn_id  = 2;                          //请求设备ID
+    uint32 sequence = 3;
+    oneof content {
+        IdentityInfo identity_info = 4;
+        SecretAuth secrett_auth = 5;
+        SecretPreset secret_preset = 6;
+        SecretDelete secret_delete = 7;
+        SecretPresetResponse secret_preset_response = 8;
+        SecretDeleteResponse secret_delete_reponse = 9;
+    }
+    uint32 result = 10;
+}
